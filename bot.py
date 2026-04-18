@@ -67,16 +67,31 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 # ==========================================
 # 2. KONFIGURASI MUSIK
 # ==========================================
-ydl_opts = {
+
+ ydl_opts = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
-    'cookiefile': 'cookies.txt',  
     'default_search': 'ytsearch',
-    'source_address': '0.0.0.0'
+    'source_address': '0.0.0.0',
+    'nocheckcertificate': True,
+    'geo_bypass': True,
+    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+    'add_header': [
+        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language: en-US,en;q=0.9',
+        'Sec-Fetch-Mode: navigate',
+    ],
+    'extractor_args': {
+        'youtube': {
+            'player_client': ['android_test', 'web_safari'],
+            'po_token': 'web+experimental'
+        }
+    },
+    'socket_timeout': 10,
+    'retries': 3,
 }
-
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
