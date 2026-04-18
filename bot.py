@@ -6,11 +6,14 @@ import aiohttp
 import base64
 import json
 import os
+import datetime
+from gtts import gTTS
+import io
 
 DISCORD_TOKEN = "MASUKKAN_TOKEN_BOT_DISCORD_DI_SINI"
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "gemma4" 
-ADMIN_ID = "Id Discord"
+ADMIN_ID = 0
 
 MEMORY_FILE = "ilmi_memory.json"
 MAX_MEMORY = 6
@@ -55,32 +58,17 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 ydl_opts = {
-    'format': 'bestaudio/best',
+    'format': 'ba/bestaudio/best',
     'noplaylist': True,
     'quiet': True,
     'no_warnings': True,
-    'default_search': 'ytsearch',
+    'default_search': 'scsearch',
     'source_address': '0.0.0.0',
-    'nocheckcertificate': True,
-    'geo_bypass': True,
-    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-    'add_header': [
-        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language: en-US,en;q=0.9',
-        'Sec-Fetch-Mode: navigate',
-    ],
-    'extractor_args': {
-        'youtube': {
-            'player_client': ['android_test', 'web_safari'],
-            'po_token': 'web+experimental'
-        }
-    },
-    'socket_timeout': 10,
-    'retries': 3,
+    'nocheckcertificate': True
 }
 
 ffmpeg_options = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -probesize 10M -analyzeduration 10M',
     'options': '-vn'
 }
 
@@ -240,12 +228,52 @@ async def stop(ctx):
     else:
         await ctx.send("Aku aja nggak di Voice Channel 🙄.") 
 
+@bot.command(name="tl")
+async def translate_text(ctx, *, text: str):
+    prompt = f"Jika teks ini bahasa Indonesia, terjemahkan ke bahasa Jepang (huruf latin/romaji dan kanji). Jika teks ini bahasa Jepang, terjemahkan ke bahasa Indonesia.\nTeks: {text}"
+    try:
+        payload = {
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "system": "Kamu adalah penerjemah jenius. Terjemahkan langsung intinya tanpa basa-basi.",
+            "stream": False
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(OLLAMA_URL, json=payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    await ctx.send(f"🇯🇵/🇮🇩 **Translate:**\n{data.get('response', '')}")
+                else:
+                    await ctx.send("Lagi pusing, server Ollama error.")
+    except Exception as e:
+        await ctx.send(f"Gagal konek ke otak AI: {str(e)[:40]}")
+
+@bot.command(name="t")
+async def tts_command(ctx, *, text: str):
+    try:
+        tts = gTTS(text=text, lang='ja')
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        await ctx.send(f"🎙️ **Pesan Suara:**", file=discord.File(fp, 'ilmi_voice.mp3'))
+    except Exception as e:
+        await ctx.send(f"Gagal bikin suara: {str(e)[:40]}")
+
 @bot.command(name="help")
 async def help_command(ctx):
-    if ctx.author.id == ADMIN_ID:
-        pesan = "**Menu Bos Dzul:**\n🎧 `!play <lagu>`\n🛑 `!stop`\n🤖 `@Ilmi <tanya>`"
-    else:
-        pesan = "**Ngapain panggil help?**\n🎧 `!play` - Putar lagu.\n🛑 `!stop` - Berhenti.\n🤖 `@Ilmi` - Tag aku kalau penting. 🙄"
-    await ctx.send(pesan)
+    embed = discord.Embed(title="⚡ ILMI BOT", description=f"Halo **{ctx.author.name}**, selamat datang di sistem Ilmi.", color=0x2b2d31)
+    embed.add_field(name="🛰️ NETWORK INFRASTRUCTURE", value="🟢 **Server Online**\n`play.f2p.life:20014`", inline=False)
+    embed.add_field(name="🧠 INTELLIGENCE CENTER", value="`@Ilmi [teks/foto]` ➔ Chat AI (Bisa Analisis Foto!)\n`!tl [teks]` ➔ Auto-Translate (ID ↔ JP)\n`!t [teks]` ➔ Generate Suara Jepang\n`!play [lagu]` ➔ Putar Musik SoundCloud\n`!stop` ➔ Hentikan Musik", inline=False)
+    embed.add_field(name="🎮 MINECRAFT", value="`!mc` `!players` `!skin` `!head`\n*(Tahap Pengembangan)*", inline=False)
+    
+    now = datetime.datetime.now()
+    hari = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"][now.weekday()]
+    bulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"][now.month - 1]
+    dt_string = f"{hari}, {now.day} {bulan} {now.year}\n{now.strftime('%H:%M:%S')} WIB"
+    
+    embed.add_field(name="📅 DATE & TIME", value=f"**{dt_string}**", inline=False)
+    embed.set_footer(text="Server: play.f2p.life:20014 • web: f2p.life")
+    
+    await ctx.send(embed=embed)
 
 bot.run(DISCORD_TOKEN)
