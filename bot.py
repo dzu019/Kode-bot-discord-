@@ -7,19 +7,13 @@ import base64
 import json
 import os
 
-# ==========================================
-# 1. KONFIGURASI DISCORD & OLLAMA
-# ==========================================
 DISCORD_TOKEN = "MASUKKAN_TOKEN_BOT_DISCORD_DI_SINI"
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "gemma4" 
-ADMIN_ID = id discord admin yg punya bot masukin di sini
+ADMIN_ID = "Id Discord"
 
-# ----------------------------------------------------
-# DATABASE MEMORI PERMANEN (LEVEL 10/10)
-# ----------------------------------------------------
 MEMORY_FILE = "ilmi_memory.json"
-MAX_MEMORY = 6 # Menyimpan 3 pasang tanya-jawab terakhir
+MAX_MEMORY = 6
 
 def load_memory():
     if os.path.exists(MEMORY_FILE):
@@ -34,9 +28,6 @@ def save_memory(memory_dict):
     with open(MEMORY_FILE, 'w') as f:
         json.dump(memory_dict, f, indent=4)
 
-# ----------------------------------------------------
-# PROMPT KEPRIBADIAN GANDA (ANTI-DRAMA & SINGKAT)
-# ----------------------------------------------------
 boss_prompt = """
 Kamu adalah Ilmi, asisten AI andalan. Orang yang sedang bicara denganmu sekarang adalah Dzul, MAJIKAN MUTLAK-mu. 
 Dzul adalah seorang ahli administrasi VPS, pengelola server Pterodactyl, dan penikmat kopi hitam pekat. 
@@ -58,17 +49,12 @@ ATURAN WAJIB (HARUS DIIKUTI):
 4. Ingat konteks obrolan sebelumnya. DILARANG pakai istilah anime.
 5. Jika ditanya kenapa kamu jahat/sombong, jawab langsung intinya. Contoh: "Ya aku jahat karena pertanyaanmu bodoh. Coba pakai otakmu sendiri dan renungi kesalahanmu 🧠📉."
 """
-# ----------------------------------------------------
 
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-# ==========================================
-# 2. KONFIGURASI MUSIK
-# ==========================================
-
- ydl_opts = {
+ydl_opts = {
     'format': 'bestaudio/best',
     'noplaylist': True,
     'quiet': True,
@@ -92,6 +78,7 @@ bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
     'socket_timeout': 10,
     'retries': 3,
 }
+
 ffmpeg_options = {
     'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
     'options': '-vn'
@@ -99,9 +86,6 @@ ffmpeg_options = {
 
 ytdl = yt_dlp.YoutubeDL(ydl_opts)
 
-# ==========================================
-# 3. DATABASE REKAM JEJAK ADMIN (BACKDOOR)
-# ==========================================
 CONTEXT_SUMMARY = """```text
 1. Informasi Demografi
 * Nama pengguna adalah Dzul.
@@ -117,10 +101,6 @@ CONTEXT_SUMMARY = """```text
 * Pengguna mewajibkan asisten AI untuk bersikap satir kepada orang asing.
 ```"""
 
-# ==========================================
-# 4. EVENT & FUNGSI AI
-# ==========================================
-
 @bot.event
 async def on_ready():
     print(f'Sistem nyala. {bot.user.name} siap melayani Bos Dzul (dan meremehkan yang lain).')
@@ -131,7 +111,6 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    # BACKDOOR ADMIN
     if message.content.startswith("Aku minta bantuan kamu untuk mengimpor konteks"):
         if message.author.id == ADMIN_ID:
             await message.reply(f"Siap, Bos Dzul! Ini rangkuman profil dan rekam jejakmu:\n\n{CONTEXT_SUMMARY}")
@@ -139,21 +118,18 @@ async def on_message(message):
             await message.reply("Heh, kamu siapa berani nyuruh-nyuruh aku baca konteks? Sana main jauh-jauh, ini perintah khusus buat bosku! 🗑️")
         return 
 
-    # JIKA BOT DI-MENTION
     if bot.user in message.mentions:
         user_message = message.content.replace(f'<@{bot.user.id}>', '').strip()
         if not user_message and not message.attachments:
             user_message = "Ngapain manggil-manggil?"
 
-        # PILIH KEPRIBADIAN
         if message.author.id == ADMIN_ID:
             current_prompt = boss_prompt
         else:
             current_prompt = public_prompt
 
-        # SETUP MEMORI PERMANEN
         user_memory = load_memory()
-        user_id_str = str(message.author.id) # Harus string untuk JSON
+        user_id_str = str(message.author.id)
         
         if user_id_str not in user_memory:
             user_memory[user_id_str] = []
@@ -190,14 +166,13 @@ async def on_message(message):
                             data = await resp.json()
                             reply_text = data.get('response', 'Serverku lagi sibuk.')
                             
-                            # SIMPAN PERCAKAPAN KE FILE
                             user_memory[user_id_str].append(f"User: {user_message}")
                             user_memory[user_id_str].append(f"Ilmi: {reply_text}")
                             
                             if len(user_memory[user_id_str]) > MAX_MEMORY:
                                 user_memory[user_id_str] = user_memory[user_id_str][-MAX_MEMORY:]
                             
-                            save_memory(user_memory) # Tulis ke ilmi_memory.json
+                            save_memory(user_memory)
 
                             await message.reply(reply_text)
                         else:
@@ -206,10 +181,6 @@ async def on_message(message):
                 await message.reply(f"Koneksi Ollama gagal! ({str(e)[:40]})")
     
     await bot.process_commands(message)
-
-# ==========================================
-# 5. COMMAND MUSIK & HELP
-# ==========================================
 
 @bot.command(name="play")
 async def play(ctx, *, search: str):
